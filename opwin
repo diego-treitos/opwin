@@ -1,0 +1,153 @@
+#!/bin/bash
+# vim: set ts=2 sw=2 sts=2 et:
+
+#( globals
+opw_class="OPwinClaSs"
+#)
+
+#( lib
+check_reqs() {
+  fine=true
+  for req in xwininfo xdotool wmctrl tabbed; do
+    if ! command -v "$req" > /dev/null; then
+      echo "Could not find required '$req'."
+      fine=false
+    fi
+  done
+  $fine || exit 1
+}
+get_root_id() {
+  # get root window id
+  xwininfo -root | awk '/Window id:/{print $4}'
+}
+
+get_active_id() {
+  # get active window id (in hex)
+  # when tabbed, this will be tabbed window id
+  xdotool getactivewindow | xargs -r printf '0x%08x\n'
+}
+
+get_focused_id() {
+  # get focused window id (in hex)
+  # when tabbed, this will be focused tab window id
+  xdotool getwindowfocus | xargs -r printf '0x%08x\n'
+}
+
+select_window() {
+  # select a window with the mouse and return its window id
+  xdotool selectwindow | xargs -r printf '0x%08x\n'
+}
+
+get_opw_id() {
+  # returns the id of opwin if present, if not it creates it and returns id
+  #opw_id=`wmctrl -lx|grep "$opw_class"|cut -d' ' -f1`
+  local opw_id=`xdotool search --classname "$opw_class"| xargs -r printf '0x%08x\n'`
+  if [ -z "$opw_id" ]; then
+    opw_id=`tabbed -d -n "$opw_class"`
+    # Main window properties
+    wmctrl -i -r "$opw_id" -b add,hidden >/dev/null 2>&1
+    wmctrl -i -r "$opw_id" -b add,sticky,above >/dev/null 2>&1
+    wmctrl -i -r "$opw_id" -b add,skip_taskbar,skip_pager >/dev/null 2>&1
+  fi
+  echo "$opw_id"
+}
+
+toggle_opw() {
+  # show/hide opwin window
+  local opw_id=`get_opw_id`
+  if xprop -id "$opw_id" | grep _NET_WM_STATE | grep -q _NET_WM_STATE_HIDDEN; then
+  # window is hidden
+    # Force floating
+    xprop -id "$opw_id" -f _NET_WM_WINDOW_TYPE 32a -set _NET_WM_WINDOW_TYPE _NET_WM_WINDOW_TYPE_DIALOG
+    xdotool set_window --overrideredirect 1 "$opw_id"
+    xdotool search --classname "$opw_class" windowunmap --sync windowmap
+    # Set window size and position
+    wmctrl -i -r "$opw_id" -e 10,$OP_X_POS,$OP_Y_POS,$OP_WIDTH,$OP_HEIGHT
+    wmctrl -i -r "$opw_id" -b remove,hidden
+    xdotool windowactivate "$opw_id"
+  else
+  #window is visible
+    wmctrl -i -r "$opw_id" -b add,hidden
+  fi
+}
+
+get_ids() {
+  # get window ids from PID and its child processes
+  sleep 1 # give time for processes and windows to be created
+  pid="$1"
+  child_pid="`pgrep --parent $pid`"
+  w_ids=""
+  for p in $pid $child_pid; do
+    w_ids+=" `xdotool search --pid $p`"
+  done
+  echo "$w_ids"
+}
+
+new_tab() {
+  # place windows in tabbed instance
+  tabbed_id="$1"
+  shift
+  for w_id in "$@"; do
+    xdotool windowreparent "$w_id" "$tabbed_id"
+  done
+}
+
+del_tab() {
+  # remove window from tabbed instance
+  xdotool windowreparent `get_focused_id` `get_root_id`
+}
+
+show_help() {
+  echo "Use: $0 <command> <parameters>"
+  echo
+  echo " Commands:"
+  echo
+  echo "    toggle        Show/Hide the opwin"
+  echo
+  echo "    add_select    Select a window to be added as a tab to the opwin"
+  echo
+  echo "    add_currrent  Add current active window as a tab to the opwin"
+  echo
+  echo "    del_current   Remove currently focused opwin tab from the opwin"
+  echo "                  insttance."
+}
+#)
+
+
+#( main
+
+check_reqs
+
+. "$HOME/.config/opwin/conf"
+
+cmd="$1"
+shift
+
+case $cmd in
+  toggle)
+    # show/hide the opwin
+    toggle_opw
+    ;;
+
+  add_select)
+    # add selected window to opwin
+    wid=`select_window`
+    new_tab "`get_opw_id`" "$wid"
+    ;;
+
+  add_current)
+    # add current window to opwin
+    wid=`get_active_id`
+    new_tab "`get_opw_id`" "$wid"
+    ;;
+
+
+  del_current)
+    # remove current window from opwin
+    del_tab
+    ;;
+
+  help|--help|-h) show_help; exit 0;;
+  *) show_help; exit 1;;
+esac
+#)
