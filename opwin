@@ -63,6 +63,7 @@ toggle_opw() {
     xdotool search --classname "$opw_class" windowunmap --sync windowmap
     # Set window size and position
     wmctrl -i -r "$opw_id" -e 10,$OP_X_POS,$OP_Y_POS,$OP_WIDTH,$OP_HEIGHT
+    # Show and focus window
     wmctrl -i -r "$opw_id" -b remove,hidden
     xdotool windowactivate "$opw_id"
   else
