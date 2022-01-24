@@ -57,10 +57,10 @@ toggle_opw() {
   local opw_id=`get_opw_id`
   if xprop -id "$opw_id" | grep _NET_WM_STATE | grep -q _NET_WM_STATE_HIDDEN; then
   # window is hidden
-    # Force floating
-    xprop -id "$opw_id" -f _NET_WM_WINDOW_TYPE 32a -set _NET_WM_WINDOW_TYPE _NET_WM_WINDOW_TYPE_DIALOG
-    xdotool set_window --overrideredirect 1 "$opw_id"
-    xdotool search --classname "$opw_class" windowunmap --sync windowmap
+  # Force floating (NOT WORKING IN ALL WMs)
+#    xprop -id "$opw_id" -f _NET_WM_WINDOW_TYPE 32a -set _NET_WM_WINDOW_TYPE _NET_WM_WINDOW_TYPE_DIALOG
+#    xdotool set_window --overrideredirect 0 "$opw_id"
+#    xdotool search --classname "$opw_class" windowunmap --sync windowmap
     # Set window size and position
     wmctrl -i -r "$opw_id" -e 10,$OP_X_POS,$OP_Y_POS,$OP_WIDTH,$OP_HEIGHT
     # Show and focus window

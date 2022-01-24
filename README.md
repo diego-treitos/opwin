@@ -42,4 +42,13 @@ To remove a window you must have it focused (*opwin* visible and selected in the
 I tried this script to work well with any window manager, **however** sometimes there are some glitches.
 
 * Sometimes the *opwin* window is temporally not *floating*. This behavior seems to be quite random. You can prevent this by marking the window class `OPwinClaSs` as *floating*.
+  ```
+  # BSPWM
+  bspc rule -a "*:OPwinClaSs" sticky=on state=floating
+
+  #i3
+  for_window [class="OPwinClaSs"] floating enable
+  for_window [class="OPwinClaSs"] sticky enable
+  ```
+
 * Sometimes, when you remove a window, it is not comnpletely dettached from *opwin* so when you delete the *opwin*, the removed window is closed too. I did not find a fix for this, however I do not personally find it very problematic in my daily use.
